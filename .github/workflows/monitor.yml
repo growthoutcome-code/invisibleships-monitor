@@ -2,18 +2,16 @@ name: site-monitor
 
 on:
   schedule:
-    # Every 30 min. Free-tier-safe for a PRIVATE repo (~48 runs/day < 2,000 free
-    # Action-minutes/month). GitHub minimum is 5 min and timing is best-effort
-    # (runs can be delayed under load). Tighter cadence costs money on private repos.
     - cron: '*/30 * * * *'
-  workflow_dispatch: {}   # run on demand from the Actions tab
+  workflow_dispatch: {}
 
 concurrency:
   group: site-monitor
   cancel-in-progress: false
 
 permissions:
-  contents: write   # to commit the evidence log back to the repo
+  contents: write
+  issues: write
 
 jobs:
   monitor:
@@ -36,7 +34,6 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           ALERT_FROM: ${{ secrets.ALERT_FROM }}
           ALERT_TO: ${{ secrets.ALERT_TO }}
-          ALERT_SMS: ${{ secrets.ALERT_SMS }}
         run: |
           set +e
           python3 site_monitor.py
@@ -55,7 +52,7 @@ jobs:
             echo "no changes to persist"
           fi
 
-      - name: Attach evidence of an outside-pipeline edit
+      - name: Attach evidence (serious change only)
         if: always() && steps.mon.outputs.code == '2'
         uses: actions/upload-artifact@v4
         with:
@@ -66,12 +63,30 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: Raise alarm (fail the run so GitHub emails you)
-        if: steps.mon.outputs.code != '0'
+      - name: Post a plain-English alert (GitHub emails you the full text)
+        if: always() && (steps.mon.outputs.code == '2' || steps.mon.outputs.code == '3')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          STATE="monitor-state/invisibleships.com"
+          if [ ! -f "$STATE/latest_alert_title.txt" ]; then echo "no alert file; skipping"; exit 0; fi
+          TITLE="$(cat "$STATE/latest_alert_title.txt")"
+          KEY="$(cat "$STATE/latest_alert_key.txt")"
+          { cat "$STATE/latest_alert.md"; printf '\n\nRun: %s\n' "$RUN_URL"; } > alert_body.md
+          EXISTING="$(gh issue list --state open --search "$KEY in:title" --json number --jq '.[0].number' 2>/dev/null)"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file alert_body.md || echo "comment failed (continuing)"
+          else
+            gh issue create --title "$TITLE" --body-file alert_body.md || echo "create failed (continuing)"
+          fi
+
+      - name: Fail the run on a SERIOUS change (so GitHub also emails you)
+        if: steps.mon.outputs.code == '2' || steps.mon.outputs.code == '1'
         run: |
           if [ "${{ steps.mon.outputs.code }}" = "2" ]; then
-            echo "::error::UNINTENDED EDIT detected OUTSIDE the Git/Vercel/Claude pipeline. Download the 'outside-pipeline-evidence' artifact on this run."
+            echo "::error::SERIOUS: a change to invisibleships.com with no publish, or the gate is down. See the new issue + evidence artifact."
           else
-            echo "::error::Monitor errored (exit ${{ steps.mon.outputs.code }})."
+            echo "::error::Monitor errored (exit 1)."
           fi
           exit 1

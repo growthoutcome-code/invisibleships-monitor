@@ -1,62 +1,41 @@
 #!/usr/bin/env python3
 """
-site_monitor.py — tamper-evident change monitor for web properties.
+site_monitor.py — tamper-evident change monitor for web properties (v1.2).
 
-DEFENSIVE ONLY. It READS the live site (like any visitor) and hashes it. It never
-edits the site, the database, the repo content, or anything else. The only thing
-it writes is its own append-only evidence log.
+DEFENSIVE ONLY. Reads the live site (like any visitor), hashes it, and logs.
+Never edits the site, database, or repo content. The only thing it writes is its
+own append-only evidence log + state.
 
-WHAT IT DOES (per run, per property)
-  1. Fetches configured pages + static resources from the LIVE site.
-  2. Hashes each response and compares to the Git-derived BASELINE (what SHOULD be
-     served) and to the PREVIOUS run.
-  3. Correlates with the current production deployment (Vercel API). A change with
-     NO new deployment is an edit that did NOT come through Git/Vercel/Claude.
-  4. Appends a hash-CHAINED entry to an append-only evidence log.
-  5. When an OUTSIDE-pipeline edit is found (change/anomaly with no new deploy) it
-     writes an evidence report + saves the raw served bytes, emails you (with the
-     evidence attached), and exits code 2 so the GitHub Action fails and GitHub
-     sends you its own failure email too.
+Confirm-each model (v1.2): the baseline records which production DEPLOYMENT/commit
+it was captured from. Each run compares the LIVE deployment to that.
 
-EXIT CODES: 0 = clean, 2 = outside-pipeline edit detected, 1 = monitor error.
+  * Live deploy == baseline deploy, but content differs, or the gate is missing
+      -> SERIOUS: a change with no publish, or the gate went down. (exit 2)
+  * Live deploy != baseline deploy
+      -> PUBLISHED CHANGE pending your confirmation. A calm notice. Nothing is
+         auto-accepted; it stays flagged until you regenerate the baseline. (exit 3)
+  * Otherwise -> clean. (exit 0)   Monitor error -> exit 1.
+
+The plain-English alert text is written to monitor-state/<property>/latest_alert.md
+(+ latest_alert_title.txt) so the workflow can post it verbatim as a GitHub issue
+(which GitHub then emails you in full).
 """
 
 import argparse, datetime, hashlib, json, os, smtplib, ssl, sys
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from urllib import request as urlrequest, error as urlerror
 
-# --------------------------------------------------------------------------- #
-# CONFIG — edit here (or point MONITOR_CONFIG at a JSON file to override).
-# --------------------------------------------------------------------------- #
 CONFIG = {
     "state_dir": os.environ.get("MONITOR_STATE_DIR", "./monitor-state"),
-    "user_agent": "InvisibleShips-Monitor/1.1 (+integrity-check)",
+    "user_agent": "InvisibleShips-Monitor/1.2 (+integrity-check)",
     "timeout_s": 20,
     "capture_headers": ["date", "age", "server", "x-vercel-id", "x-vercel-cache",
-                        "x-matched-path", "content-type", "content-length",
-                        "etag", "last-modified", "strict-transport-security"],
-    "alerts": {
-        "on": ["changed", "anomaly", "unreachable"],
-        "email": {
-            "enabled": bool(os.environ.get("SMTP_HOST")),
-            "smtp_host": os.environ.get("SMTP_HOST", ""),
-            "smtp_port": int(os.environ.get("SMTP_PORT", "587")),
-            "username": os.environ.get("SMTP_USER", ""),
-            "password": os.environ.get("SMTP_PASS", ""),
-            "from_addr": os.environ.get("ALERT_FROM", ""),
-            "to_addrs": [a for a in os.environ.get("ALERT_TO", "").split(",") if a],
-        },
-        "sms_to": [a for a in os.environ.get("ALERT_SMS", "").split(",") if a],
-    },
+                        "content-type", "content-length", "etag", "last-modified"],
     "properties": [
         {
             "name": "invisibleships.com",
             "base_url": "https://invisibleships.com",
             "pages": ["/", "/journal/is-j01-20250227-entry"],
-            "resources": [],   # empty => check every resource in the baseline file
+            "resources": [],   # empty => every resource in the baseline file
             "baseline_file": "site_baseline.invisibleships.json",
             "gate_marker": "18 or older",
             "vercel": {"project_id": "prj_WgklczuymEvBDnkaAFTCYljgQBkF",
@@ -65,7 +44,7 @@ CONFIG = {
     ],
 }
 
-# --------------------------------------------------------------------------- #
+# ------------------------------------------------------------------ helpers ---
 def now_utc():
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -110,7 +89,7 @@ def vercel_current_prod(vc, cfg):
     except Exception:
         return None, None
 
-# --- evidence log (append-only, hash-chained) ------------------------------- #
+# --------------------------------------------- evidence log (hash-chained) ---
 def last_chain_hash(log_path):
     if not os.path.exists(log_path): return "GENESIS"
     last = "GENESIS"
@@ -144,52 +123,7 @@ def verify_chain(log_path):
             prev = e["entry_hash"]
     return True, n, None
 
-# --- alerting --------------------------------------------------------------- #
-def send_email(cfg, subject, body, attachments=None):
-    e = cfg["alerts"]["email"]
-    if not e.get("enabled") or not e.get("to_addrs"):
-        return "skipped(email not configured)"
-    msg = MIMEMultipart()
-    msg["Subject"] = subject
-    msg["From"] = e["from_addr"] or e["username"]
-    msg["To"] = ", ".join(e["to_addrs"])
-    msg.attach(MIMEText(body))
-    for path in (attachments or []):
-        try:
-            with open(path, "rb") as fh:
-                part = MIMEBase("application", "octet-stream")
-                part.set_payload(fh.read())
-            encoders.encode_base64(part)
-            part.add_header("Content-Disposition", f'attachment; filename="{os.path.basename(path)}"')
-            msg.attach(part)
-        except Exception:
-            pass
-    try:
-        with smtplib.SMTP(e["smtp_host"], e["smtp_port"], timeout=20) as s:
-            s.starttls(context=ssl.create_default_context())
-            if e["username"]: s.login(e["username"], e["password"])
-            s.sendmail(msg["From"], e["to_addrs"], msg.as_string())
-        return "sent"
-    except Exception as ex:
-        return f"error({ex})"
-
-def send_sms_via_email_gateway(cfg, body):
-    sms_to = cfg["alerts"].get("sms_to") or []
-    if not sms_to: return "skipped(no sms_to)"
-    e = cfg["alerts"]["email"]
-    if not e.get("enabled"): return "skipped(email transport needed for sms gateway)"
-    msg = MIMEText(body[:300]); msg["Subject"] = "site alert"
-    msg["From"] = e["from_addr"] or e["username"]; msg["To"] = ", ".join(sms_to)
-    try:
-        with smtplib.SMTP(e["smtp_host"], e["smtp_port"], timeout=20) as s:
-            s.starttls(context=ssl.create_default_context())
-            if e["username"]: s.login(e["username"], e["password"])
-            s.sendmail(msg["From"], sms_to, msg.as_string())
-        return "sent"
-    except Exception as ex:
-        return f"error({ex})"
-
-# --- core pass -------------------------------------------------------------- #
+# ---------------------------------------------------------------- core pass ---
 def check_property(prop, cfg, script_dir):
     state_dir = os.path.join(cfg["state_dir"], prop["name"])
     snap_dir = os.path.join(state_dir, "snapshots")
@@ -199,18 +133,19 @@ def check_property(prop, cfg, script_dir):
     prev_path = os.path.join(state_dir, "last_state.json")
     prev = json.load(open(prev_path)) if os.path.exists(prev_path) else {}
 
-    baseline = {}
+    baseline, baseline_dpl, baseline_sha = {}, None, None
     bf = os.path.join(script_dir, prop.get("baseline_file", ""))
     if os.path.exists(bf):
-        baseline = json.load(open(bf)).get("resources", {})
+        bj = json.load(open(bf))
+        baseline = bj.get("resources", {})
+        baseline_dpl = bj.get("prod_deployment_id")
+        baseline_sha = bj.get("git_commit")
 
     vc = prop.get("vercel", {})
     dep_id, dep_sha = vercel_current_prod(vc, cfg) if vc else (None, None)
-    prev_dep = prev.get("prod_deployment_id")
-    new_deploy = bool(dep_id) and bool(prev_dep) and dep_id != prev_dep
 
     targets = list(prop.get("pages", [])) + (list(prop.get("resources") or baseline.keys()))
-    observed, changes, anomalies, unreachable = {}, [], [], []
+    observed, changed_paths, resource_diffs, gate_missing, unreachable = {}, [], [], [], []
     ts = now_utc()
 
     for path in targets:
@@ -223,129 +158,138 @@ def check_property(prop, cfg, script_dir):
         rec["bytes"] = len(body); rec["sha256"] = sha256_bytes(body)
         rec["content_hash"] = normalize_text(body) if is_page else rec["sha256"]
 
-        target_anoms = []
+        note = False
         if is_page and prop.get("gate_marker"):
             present = prop["gate_marker"].encode() in body
             rec["gate_present"] = present
-            if not present: target_anoms.append({"path": path, "kind": "gate_marker_missing"})
+            if not present: gate_missing.append(path); note = True
         if not is_page and path in baseline:
-            rec["matches_git_baseline"] = (rec["sha256"] == baseline[path]["sha256"])
-            if not rec["matches_git_baseline"]:
-                target_anoms.append({"path": path, "kind": "resource_differs_from_git",
-                                     "expected_sha256": baseline[path]["sha256"], "got_sha256": rec["sha256"]})
+            rec["matches_baseline"] = (rec["sha256"] == baseline[path]["sha256"])
+            if not rec["matches_baseline"]: resource_diffs.append(path); note = True
 
         prev_rec = (prev.get("targets") or {}).get(path, {})
-        changed = bool(prev_rec.get("content_hash")) and prev_rec["content_hash"] != rec["content_hash"]
-        if changed:
-            changes.append({"path": path, "kind": "content_changed",
-                            "from": prev_rec["content_hash"], "to": rec["content_hash"],
-                            "matched_new_deploy": new_deploy})
-            if not new_deploy:
-                target_anoms.append({"path": path, "kind": "changed_without_deploy"})
+        if prev_rec.get("content_hash") and prev_rec["content_hash"] != rec["content_hash"]:
+            changed_paths.append(path); note = True
 
-        # Save the exact served bytes as evidence whenever the target is noteworthy.
-        if target_anoms or changed:
-            snap_name = f"{(path.strip('/').replace('/', '_') or 'root')}.{ts.replace(':', '')}.{rec['sha256'][:12]}.bin"
-            with open(os.path.join(snap_dir, snap_name), "wb") as fh:
-                fh.write(body)
-            rec["snapshot"] = snap_name
-        anomalies.extend(target_anoms)
+        if note:
+            snap = f"{(path.strip('/').replace('/', '_') or 'root')}.{ts.replace(':', '')}.{rec['sha256'][:12]}.bin"
+            with open(os.path.join(snap_dir, snap), "wb") as fh: fh.write(body)
+            rec["snapshot"] = snap
         observed[path] = rec
 
-    # OUTSIDE the Git/Vercel/Claude pipeline = a change/anomaly with NO new deployment.
-    outside = (not new_deploy) and bool(changes or anomalies) and dep_id is not None
-    status_word = ("unreachable" if unreachable and len(unreachable) == len(targets)
-                   else "anomaly" if anomalies else "changed" if changes else "ok")
+    # ---- classify (confirm-each) --------------------------------------------
+    deploy_changed = (dep_id is not None and baseline_dpl is not None and dep_id != baseline_dpl)
+    any_diff = bool(resource_diffs or changed_paths)
+
+    if gate_missing:
+        verdict = "serious"                        # gate down is always serious
+    elif deploy_changed:
+        verdict = "published_pending"              # a publish shipped since baseline
+    elif any_diff:
+        verdict = "serious"                        # changed with no publish -> out of pipeline
+    else:
+        verdict = "ok"
 
     entry = {
         "seq": prev.get("seq", -1) + 1, "timestamp_utc": ts, "property": prop["name"],
-        "status": status_word, "outside_pipeline_edit": outside,
-        "prod_deployment_id": dep_id, "prod_git_sha": dep_sha,
-        "new_deploy_since_last": new_deploy, "targets": observed,
-        "changes": changes, "anomalies": anomalies, "unreachable": unreachable,
-        "collector": {"host": os.uname().nodename, "tool": "site_monitor.py/1.1"},
+        "verdict": verdict,
+        "live_deployment_id": dep_id, "live_git_sha": dep_sha,
+        "baseline_deployment_id": baseline_dpl, "baseline_git_sha": baseline_sha,
+        "deploy_changed_from_baseline": deploy_changed,
+        "gate_missing": gate_missing, "resource_diffs": resource_diffs,
+        "changed_paths": changed_paths, "unreachable": unreachable,
+        "targets": observed, "collector": {"host": os.uname().nodename, "tool": "site_monitor.py/1.2"},
     }
     entry_hash = append_evidence(log_path, entry)
-    json.dump({"seq": entry["seq"], "prod_deployment_id": dep_id, "targets": observed},
-              open(prev_path, "w"))
+    json.dump({"seq": entry["seq"], "targets": observed}, open(prev_path, "w"))
 
-    # Build a focused evidence report + gather attachments when outside-pipeline.
-    attachments = []
-    if outside:
-        snaps = [observed[p]["snapshot"] for p in observed if observed[p].get("snapshot")]
-        report = {
-            "alert": "UNINTENDED_EDIT_OUTSIDE_PIPELINE",
-            "meaning": ("Content changed with NO corresponding Vercel deployment. Legitimate "
-                        "changes go Git -> Vercel (that's how Claude/you deploy), so this edit "
-                        "did not come through Git/Vercel/Claude."),
-            "property": prop["name"], "timestamp_utc": ts,
-            "production_deployment_id": dep_id, "production_git_sha": dep_sha,
-            "note": "Production deployment is unchanged since the previous check — no deploy occurred.",
-            "evidence_log": {"seq": entry["seq"], "entry_hash": entry_hash, "log": "evidence_log.jsonl"},
-            "changes": changes, "anomalies": anomalies, "served_snapshots": snaps,
-            "how_to_verify": ("The .bin snapshots are the exact bytes served at capture time. "
-                              "Run verify_chain() on evidence_log.jsonl to prove the log is unedited."),
-        }
-        base = os.path.join(ev_dir, f"OUTSIDE_EDIT_{ts.replace(':', '')}")
-        json.dump(report, open(base + ".json", "w"), indent=2, sort_keys=True)
-        with open(base + ".md", "w") as fh:
-            fh.write(f"# Unintended edit detected — OUTSIDE Git/Vercel/Claude\n\n"
-                     f"**{prop['name']}** — {ts}\n\n{report['meaning']}\n\n"
-                     f"Production deployment `{dep_id}` (git `{str(dep_sha)[:10]}`) did **not** change, "
-                     f"so no legitimate deploy explains this.\n\n## What changed\n" +
-                     "".join(f"- `{c['path']}` — content changed (no deploy)\n" for c in changes) +
-                     "".join(f"- `{a['path']}` — {a['kind']}\n" for a in anomalies) +
-                     f"\n## Attached evidence\n- `evidence_log.jsonl` entry seq {entry['seq']} "
-                     f"(hash `{entry_hash[:16]}...`)\n" +
-                     "".join(f"- served bytes: `{s}`\n" for s in snaps))
-        attachments = [base + ".json", base + ".md"] + [os.path.join(snap_dir, s) for s in snaps]
-        entry["evidence_report"] = [base + ".json", base + ".md"]
+    # ---- plain-English alert (workflow posts this verbatim as an issue) -----
+    title_path = os.path.join(state_dir, "latest_alert_title.txt")
+    body_path = os.path.join(state_dir, "latest_alert.md")
+    key_path = os.path.join(state_dir, "latest_alert_key.txt")   # ASCII, for issue de-dup
+    for p in (title_path, body_path, key_path):
+        if os.path.exists(p): os.remove(p)
 
-    if status_word in cfg["alerts"]["on"] and status_word != "ok":
-        tag = "UNINTENDED EDIT (outside pipeline)" if outside else status_word.upper()
-        subj = f"[{prop['name']}] {tag} — {len(changes)} changes, {len(anomalies)} anomalies"
-        body = (f"{subj}\nTime: {ts}\nProd deploy: {dep_id} (git {str(dep_sha)[:10]}), "
-                f"new_deploy={new_deploy}\nOutside Git/Vercel/Claude: {outside}\n"
-                f"Changes: {json.dumps(changes)[:1500]}\nAnomalies: {json.dumps(anomalies)[:1500]}\n"
-                f"Evidence entry: seq={entry['seq']} hash={entry_hash}\n"
-                + ("Evidence (served bytes + report) attached; also on the Action run as an artifact.\n"
-                   if outside else ""))
-        entry["alerts"] = {"email": send_email(cfg, subj, body, attachments if outside else None),
-                           "sms": send_sms_via_email_gateway(cfg, subj)}
+    def bullets():
+        out = []
+        for p in gate_missing:   out.append(f"- The **front-door gate is missing** from `{p}` — the site may be publicly exposed.")
+        for p in resource_diffs: out.append(f"- The file being served at `{p}` **no longer matches the approved version**.")
+        for p in changed_paths:
+            if p not in gate_missing and p not in resource_diffs:
+                out.append(f"- The content at `{p}` **changed** since the last check.")
+        for p in unreachable:    out.append(f"- `{p}` could not be reached (site down or blocked).")
+        return "\n".join(out) or "- (see the evidence file for details)"
+
+    if verdict == "serious":
+        title = "⚠️ Possible unauthorized change to invisibleships.com"
+        write_report(ev_dir, ts, entry, entry_hash, observed, snap_dir)
+        alert = (
+            f"An automated integrity check found a problem on **invisibleships.com** at **{ts}** that did "
+            f"**not** come through the normal publish process.\n\n"
+            f"**What happened:**\n{bullets()}\n\n"
+            f"**Why it matters:** the live site is still on the same published version as before "
+            f"(deployment `{str(dep_id)[:20]}`, commit `{str(dep_sha)[:10]}`), so nothing was published to "
+            f"explain this — the change was made another way.\n\n"
+            f"**Is this you?** If not, treat it as a possible unauthorized change (e.g. the gate being shut "
+            f"down again).\n\n"
+            f"**Evidence** (the exact content served + a tamper-evident record) is attached to this run as the "
+            f"**outside-pipeline-evidence** download.\n\n— Invisible Ships site monitor")
+        open(title_path, "w").write(title); open(body_path, "w").write(alert)
+        open(key_path, "w").write("Possible unauthorized change to invisibleships.com")
+    elif verdict == "published_pending":
+        title = "📣 A change was published to invisibleships.com — please confirm"
+        alert = (
+            f"A **new version of invisibleships.com was published** at **{ts}**.\n\n"
+            f"- Previously the site was on deployment `{str(baseline_dpl)[:20]}` (commit `{str(baseline_sha)[:10]}`).\n"
+            f"- It is now on deployment `{str(dep_id)[:20]}` (commit `{str(dep_sha)[:10]}`).\n\n"
+            f"**If this was you** (or someone you authorized), no action needed except to **confirm** it — "
+            f"regenerate the monitor's baseline so it treats the new version as the approved one. Until you do, "
+            f"this stays flagged.\n\n"
+            f"**If this was NOT you,** someone published a change you didn't authorize — investigate the commit "
+            f"above.\n\n— Invisible Ships site monitor")
+        open(title_path, "w").write(title); open(body_path, "w").write(alert)
+        open(key_path, "w").write("A change was published to invisibleships.com")
+
     return entry
 
+def write_report(ev_dir, ts, entry, entry_hash, observed, snap_dir):
+    snaps = [observed[p]["snapshot"] for p in observed if observed[p].get("snapshot")]
+    report = {"alert": "SERIOUS_CHANGE_NO_PUBLISH", "timestamp_utc": ts,
+              "live_deployment_id": entry["live_deployment_id"], "live_git_sha": entry["live_git_sha"],
+              "gate_missing": entry["gate_missing"], "resource_diffs": entry["resource_diffs"],
+              "changed_paths": entry["changed_paths"], "served_snapshots": snaps,
+              "evidence_log": {"seq": entry["seq"], "entry_hash": entry_hash}}
+    base = os.path.join(ev_dir, f"SERIOUS_{ts.replace(':', '')}")
+    json.dump(report, open(base + ".json", "w"), indent=2, sort_keys=True)
+
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--selftest", action="store_true")
+    ap = argparse.ArgumentParser(); ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args()
-    cfg = load_config()
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    if args.selftest:
-        return selftest(cfg, script_dir)
-    any_outside = False
+    cfg = load_config(); script_dir = os.path.dirname(os.path.abspath(__file__))
+    if args.selftest: return selftest()
+    any_serious = any_published = False
     try:
         for prop in cfg["properties"]:
             e = check_property(prop, cfg, script_dir)
-            any_outside = any_outside or e.get("outside_pipeline_edit")
-            print(f"[{e['timestamp_utc']}] {e['property']}: {e['status']} "
-                  f"(seq {e['seq']}, {len(e['changes'])} changes, {len(e['anomalies'])} anomalies, "
-                  f"outside_pipeline={e.get('outside_pipeline_edit')})")
+            any_serious = any_serious or e["verdict"] == "serious"
+            any_published = any_published or e["verdict"] == "published_pending"
+            print(f"[{e['timestamp_utc']}] {e['property']}: {e['verdict']} "
+                  f"(live {str(e['live_deployment_id'])[:12]} vs baseline {str(e['baseline_deployment_id'])[:12]})")
     except Exception as ex:
-        print(f"MONITOR ERROR: {ex}", file=sys.stderr)
-        sys.exit(1)
-    sys.exit(2 if any_outside else 0)   # 2 => GitHub Action fails => GitHub emails you
+        print(f"MONITOR ERROR: {ex}", file=sys.stderr); sys.exit(1)
+    sys.exit(2 if any_serious else 3 if any_published else 0)
 
-def selftest(cfg, script_dir):
+def selftest():
     import tempfile
     tmp = tempfile.mkdtemp(); log = os.path.join(tmp, "evidence_log.jsonl")
-    base = {"seq": 0, "timestamp_utc": now_utc(), "property": "selftest", "status": "ok"}
+    base = {"seq": 0, "timestamp_utc": now_utc(), "property": "selftest", "verdict": "ok"}
     append_evidence(log, base); append_evidence(log, {**base, "seq": 1})
     ok, n, _ = verify_chain(log)
-    lines = open(log).read().splitlines()
-    e1 = json.loads(lines[1]); e1["status"] = "TAMPERED"; lines[1] = json.dumps(e1, sort_keys=True)
+    lines = open(log).read().splitlines(); import json as J
+    e1 = J.loads(lines[1]); e1["verdict"] = "TAMPERED"; lines[1] = J.dumps(e1, sort_keys=True)
     open(log, "w").write("\n".join(lines) + "\n")
-    ok2, _, bad2 = verify_chain(log)
-    print(f"self-test: {n} entries, chain_valid={ok}; after edit chain_valid={ok2} (bad seq {bad2})")
+    ok2, _, bad = verify_chain(log)
+    print(f"self-test: {n} entries chain_valid={ok}; after edit chain_valid={ok2} (bad seq {bad})")
     print("PASS" if (ok and not ok2) else "FAIL")
 
 if __name__ == "__main__":
