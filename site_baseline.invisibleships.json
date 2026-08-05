@@ -1,0 +1,81 @@
+{
+  "git_commit": "8787b63294094aaff8553f8e122f2f520c4276a7",
+  "note": "Intended fingerprint of git-versioned static resources for the current production deployment. Any live /corpus/* resource whose hash differs from this (without a new deployment) is an integrity anomaly.",
+  "prod_deployment_id": "dpl_6iBPyQqHcHZzUpzz85dAcW7UM6SK",
+  "property": "invisibleships.com",
+  "resource_count": 18,
+  "resources": {
+    "/corpus/_manifest.json": {
+      "bytes": 157,
+      "sha256": "062638d7f1643f89446d12fddf08ab4d124f7b38dcc285d70465fd2aae3b79d7"
+    },
+    "/corpus/documents_00.json": {
+      "bytes": 141400,
+      "sha256": "4d98daf3e03b0edb06e618db94566bb7127c3ddef06450fe96ceea10f38e48e4"
+    },
+    "/corpus/documents_01.json": {
+      "bytes": 523637,
+      "sha256": "978de90af6e5e6649f50abde64605d36f6a8b16b53076ae8477950de12b54290"
+    },
+    "/corpus/documents_02.json": {
+      "bytes": 506356,
+      "sha256": "616bd95334e05bcdd984d3757eb30a1eca42b4102a661214b46f8a0942910f9a"
+    },
+    "/corpus/documents_03.json": {
+      "bytes": 451779,
+      "sha256": "1071ebe8818ea13a682ced4be5aca1de64beffb710a7d2ba60ebaacd3229be47"
+    },
+    "/corpus/documents_04.json": {
+      "bytes": 519831,
+      "sha256": "1ef90d710d88b3e547f00d9b84759ab2eeb4b1233d3b77b259834ec3166ba20c"
+    },
+    "/corpus/documents_05.json": {
+      "bytes": 692560,
+      "sha256": "d7137060387e78d12515d7a3808a7a9c5afee072be959ac054b6f044e8c9555e"
+    },
+    "/corpus/documents_06.json": {
+      "bytes": 391401,
+      "sha256": "f5d919989576ae86bdcd46f142987f3f67473d6846067abeba47a92b21a74a0a"
+    },
+    "/corpus/documents_07.json": {
+      "bytes": 699681,
+      "sha256": "5f6b02d6ea1446b4df1640d149d8a836bf3fb69f5950a5f92c4deef886cbdeef"
+    },
+    "/corpus/documents_08.json": {
+      "bytes": 526762,
+      "sha256": "b592033a0dec0b41c835f1b2c65b77fd3077093367a942b325a1de68a2cd592b"
+    },
+    "/corpus/documents_09.json": {
+      "bytes": 618954,
+      "sha256": "01f6074c0c0f98ea03e2de15455f61d54f1e7176a39ef5edeee70562e0211c57"
+    },
+    "/corpus/documents_10.json": {
+      "bytes": 206528,
+      "sha256": "5a74cad7c51d716dc53c29a195ce4bdec5783d09e981012226d82d3bf218c5c0"
+    },
+    "/corpus/documents_11.json": {
+      "bytes": 184169,
+      "sha256": "58b3843ffa3e80136428af99252a672f611dfe0c7bb00aa9e8f76e073c460973"
+    },
+    "/corpus/documents_12.json": {
+      "bytes": 88472,
+      "sha256": "163f648677b1e272c7bf40e32bc68788dcf2ec5259d91dc9e0356942f9dd7aea"
+    },
+    "/corpus/documents_13.json": {
+      "bytes": 93649,
+      "sha256": "bcbea5b0e6c71a84554e3af36cc552c9822ae51dd460dab06fd44ad446235ef8"
+    },
+    "/corpus/documents_14.json": {
+      "bytes": 129458,
+      "sha256": "93b55553b7f2bfa4a087287bd93726616d268417f0471e4959cf7680534050ee"
+    },
+    "/corpus/documents_15.json": {
+      "bytes": 72752,
+      "sha256": "6bdcb20e6a2b9e1eb1310bdd5c9eb56a0fbbe3e85dd7c1574420abb3c3da2813"
+    },
+    "/corpus/rels.json": {
+      "bytes": 416439,
+      "sha256": "9b88b89ee31583a0c62ac781237b234aba752f0832e834c4cabd58940cabbd2f"
+    }
+  }
+}

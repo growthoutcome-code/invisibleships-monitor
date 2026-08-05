@@ -1,0 +1,77 @@
+name: site-monitor
+
+on:
+  schedule:
+    # Every 30 min. Free-tier-safe for a PRIVATE repo (~48 runs/day < 2,000 free
+    # Action-minutes/month). GitHub minimum is 5 min and timing is best-effort
+    # (runs can be delayed under load). Tighter cadence costs money on private repos.
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}   # run on demand from the Actions tab
+
+concurrency:
+  group: site-monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # to commit the evidence log back to the repo
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run monitor
+        id: mon
+        env:
+          MONITOR_STATE_DIR: ./monitor-state
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ALERT_FROM: ${{ secrets.ALERT_FROM }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+          ALERT_SMS: ${{ secrets.ALERT_SMS }}
+        run: |
+          set +e
+          python3 site_monitor.py
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Persist evidence log
+        if: always()
+        run: |
+          if [ -n "$(git status --porcelain monitor-state)" ]; then
+            git config user.name  "site-monitor[bot]"
+            git config user.email "site-monitor@users.noreply.github.com"
+            git add monitor-state
+            git commit -m "monitor run: $(date -u +%FT%TZ)"
+            git push
+          else
+            echo "no changes to persist"
+          fi
+
+      - name: Attach evidence of an outside-pipeline edit
+        if: always() && steps.mon.outputs.code == '2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: outside-pipeline-evidence-${{ github.run_id }}
+          path: |
+            monitor-state/**/evidence/**
+            monitor-state/**/snapshots/**
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Raise alarm (fail the run so GitHub emails you)
+        if: steps.mon.outputs.code != '0'
+        run: |
+          if [ "${{ steps.mon.outputs.code }}" = "2" ]; then
+            echo "::error::UNINTENDED EDIT detected OUTSIDE the Git/Vercel/Claude pipeline. Download the 'outside-pipeline-evidence' artifact on this run."
+          else
+            echo "::error::Monitor errored (exit ${{ steps.mon.outputs.code }})."
+          fi
+          exit 1
