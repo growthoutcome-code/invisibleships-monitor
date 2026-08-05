@@ -1,0 +1,27 @@
+{
+  "alert": "UNINTENDED_EDIT_OUTSIDE_PIPELINE",
+  "anomalies": [
+    {
+      "expected_sha256": "deadbeeftestcorruption",
+      "got_sha256": "062638d7f1643f89446d12fddf08ab4d124f7b38dcc285d70465fd2aae3b79d7",
+      "kind": "resource_differs_from_git",
+      "path": "/corpus/_manifest.json"
+    }
+  ],
+  "changes": [],
+  "evidence_log": {
+    "entry_hash": "601b2ab37148cc617a24d804b43289a7d7415764b37147546537fd163863ac7e",
+    "log": "evidence_log.jsonl",
+    "seq": 3
+  },
+  "how_to_verify": "The .bin snapshots are the exact bytes served at capture time. Run verify_chain() on evidence_log.jsonl to prove the log is unedited.",
+  "meaning": "Content changed with NO corresponding Vercel deployment. Legitimate changes go Git -> Vercel (that's how Claude/you deploy), so this edit did not come through Git/Vercel/Claude.",
+  "note": "Production deployment is unchanged since the previous check \u2014 no deploy occurred.",
+  "production_deployment_id": "dpl_6iBPyQqHcHZzUpzz85dAcW7UM6SK",
+  "production_git_sha": "8787b63294094aaff8553f8e122f2f520c4276a7",
+  "property": "invisibleships.com",
+  "served_snapshots": [
+    "corpus__manifest.json.2026-08-05T205024Z.062638d7f164.bin"
+  ],
+  "timestamp_utc": "2026-08-05T20:50:24Z"
+}
