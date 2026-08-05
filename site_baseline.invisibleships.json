@@ -7,7 +7,7 @@
   "resources": {
     "/corpus/_manifest.json": {
       "bytes": 157,
-      "sha256": "deadbeeftestcorruption"
+      "sha256": "062638d7f1643f89446d12fddf08ab4d124f7b38dcc285d70465fd2aae3b79d7"
     },
     "/corpus/documents_00.json": {
       "bytes": 141400,
