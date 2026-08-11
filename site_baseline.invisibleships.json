@@ -1,7 +1,7 @@
 {
-  "git_commit": "8787b63294094aaff8553f8e122f2f520c4276a7",
+  "git_commit": "7aed4bd0a38bc540f0c8579f52efb200fd314dd3",
   "note": "Intended fingerprint of git-versioned static resources for the current production deployment. Any live /corpus/* resource whose hash differs from this (without a new deployment) is an integrity anomaly.",
-  "prod_deployment_id": "dpl_6iBPyQqHcHZzUpzz85dAcW7UM6SK",
+  "prod_deployment_id": "dpl_21wTWZZn9vkdQvY27dMCTucFqztS",
   "property": "invisibleships.com",
   "resource_count": 18,
   "resources": {
@@ -74,8 +74,8 @@
       "sha256": "6bdcb20e6a2b9e1eb1310bdd5c9eb56a0fbbe3e85dd7c1574420abb3c3da2813"
     },
     "/corpus/rels.json": {
-      "bytes": 416439,
-      "sha256": "9b88b89ee31583a0c62ac781237b234aba752f0832e834c4cabd58940cabbd2f"
+      "bytes": 391767,
+      "sha256": "6a0f95e7205970655e01433ee3ae7bd08f678197639255b49531d2db706dea31"
     }
   }
 }
