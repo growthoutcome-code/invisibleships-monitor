@@ -212,11 +212,40 @@ def check_property(prop, cfg, script_dir):
 
     def bullets():
         out = []
-        for p in gate_missing:   out.append(f"- The **front-door gate is missing** from `{p}` — the site may be publicly exposed.")
-        for p in resource_diffs: out.append(f"- The file being served at `{p}` **no longer matches the approved version**.")
+        def _cdiff(p):
+            try:
+                import glob as _g, re as _re
+                rec = observed.get(p) or {}
+                newsnap = rec.get("snapshot")
+                base = (p.strip("/").replace("/", "_")) or "root"
+                snaps = sorted(_g.glob(os.path.join(snap_dir, base + ".*.bin")))
+                prev = [s for s in snaps if not (newsnap and s.endswith(newsnap))]
+                if not prev or not newsnap:
+                    return ""
+                old = open(prev[-1], "rb").read().decode("utf-8", "replace")
+                new = open(os.path.join(snap_dir, newsnap), "rb").read().decode("utf-8", "replace")
+                ow = _re.findall(r"[A-Za-z0-9]+", old)
+                nw = _re.findall(r"[A-Za-z0-9]+", new)
+                oset, nset = set(ow), set(nw)
+                seen = set(); removed = []
+                for w in ow:
+                    if w not in nset and w not in seen:
+                        seen.add(w); removed.append(w)
+                seen = set(); added = []
+                for w in nw:
+                    if w not in oset and w not in seen:
+                        seen.add(w); added.append(w)
+                parts = []
+                if removed: parts.append("removed word(s): " + ", ".join(removed[:8]))
+                if added: parts.append("added word(s): " + ", ".join(added[:8]))
+                return ("  \u2014 what changed: " + "; ".join(parts)) if parts else ""
+            except Exception:
+                return ""
+        for p in gate_missing:   out.append(f"- The **front-door gate is missing** from `{p}` \u2014 the site may be publicly exposed.")
+        for p in resource_diffs: out.append(f"- The file being served at `{p}` **no longer matches the approved version**.{_cdiff(p)}")
         for p in changed_paths:
             if p not in gate_missing and p not in resource_diffs:
-                out.append(f"- The content at `{p}` **changed** since the last check.")
+                out.append(f"- The content at `{p}` **changed** since the last check.{_cdiff(p)}")
         for p in unreachable:    out.append(f"- `{p}` could not be reached (site down or blocked).")
         return "\n".join(out) or "- (see the evidence file for details)"
 
