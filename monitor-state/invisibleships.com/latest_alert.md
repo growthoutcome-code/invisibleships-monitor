@@ -1,7 +1,7 @@
-A **new version of invisibleships.com was published** at **2026-08-11T16:51:41Z**.
+A **new version of invisibleships.com was published** at **2026-08-13T01:19:30Z**.
 
-- Previously the site was on deployment `dpl_6iBPyQqHcHZzUpzz` (commit `8787b63294`).
-- It is now on deployment `dpl_21wTWZZn9vkdQvY2` (commit `7aed4bd0a3`).
+- Previously the site was on deployment `dpl_21wTWZZn9vkdQvY2` (commit `7aed4bd0a3`).
+- It is now on deployment `dpl_9Mf6Jz2gvss59HzB` (commit `6bdda001c2`).
 
 **If this was you** (or someone you authorized), no action needed except to **confirm** it — regenerate the monitor's baseline so it treats the new version as the approved one. Until you do, this stays flagged.
 
