@@ -1,6 +1,4 @@
-Digest 2026-08-13T03:20:43Z -- 3 change(s)/issue(s) detected
+Digest 2026-08-13T14:12:52Z -- 1 change(s)/issue(s) detected
 
 Live production differs from your approved baseline:
 - Live is on a NEWER deployment (commit 6bdda001c2) than the approved baseline (7aed4bd0a3). If this was you, regenerate the baseline to approve it.
-- page / CHANGED (12338 B -> 12337 B) -- removed word(s): f28a2df91b7539b7, 03f7c6bc932ce1e3, 40b89ee6a258ef49, 25126673f7d0b377, 340, 672af241ee4264ec, eaa156c8feb383be, 25bec3bf00a8c4da, c2fba00c0c7816a9, a9e302c1a083d5ec, 0c85e9bfc8219085, 2745, EEZ1GNQQuJUfIfj, dHo; added word(s): b34df11e9364c0db, de96603576ac7c02, 705cfaec4d5b6fe9, 345b7bf7a631f7bd, 233, 526e23fe66ca36b5, 913, a5f58dc196b77508, 4bfe3f4d3b07b557, edc6deaa8ecdd80c, 158752c2ec4d3262, 36886653d7cae118, 707, DILoxllbs, IZwTEg8Ddv0
-- page /journal/is-j01-20250227-entry CHANGED (16435 B -> 16435 B) -- removed word(s): f28a2df91b7539b7, 03f7c6bc932ce1e3, 40b89ee6a258ef49, 25126673f7d0b377, 340, 672af241ee4264ec, 25bec3bf00a8c4da, f2e04db13070eb99, 0c85e9bfc8219085, EEZ1GNQQuJUfIfj, dHo; added word(s): b34df11e9364c0db, de96603576ac7c02, 705cfaec4d5b6fe9, 345b7bf7a631f7bd, 233, 526e23fe66ca36b5, 4bfe3f4d3b07b557, 6164a3eafd39b319, 36886653d7cae118, DILoxllbs, IZwTEg8Ddv0
