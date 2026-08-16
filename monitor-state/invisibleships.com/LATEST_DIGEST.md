@@ -1,4 +1,5 @@
-Digest 2026-08-16T13:22:36Z -- 1 change(s)/issue(s) detected
+Digest 2026-08-16T18:01:58Z -- no changes (live matches approved baseline)
 
-Live production differs from your approved baseline:
-- Live is on a NEWER deployment (commit 68d2828edb) than the approved baseline (7aed4bd0a3). If this was you, regenerate the baseline to approve it.
+No changes. Live production matches your approved baseline (commit fcc56dad2c, deploy dpl_8UrKNBtYh2W25UnTDYoTA2XAxt9E). All 18 corpus files and 2 page(s) match.
+
+(Reference synced to current baseline fcc56dad2c.)
