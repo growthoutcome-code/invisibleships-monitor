@@ -1,6 +1,4 @@
-Digest 2026-09-15T05:31:53Z -- 3 change(s)/issue(s) detected
+Digest 2026-09-15T17:21:17Z -- 1 change(s)/issue(s) detected
 
 Live production differs from your approved baseline:
 - Live is on a NEWER deployment (commit d244b46d46) than the approved baseline (4e2b55f2f8). If this was you, regenerate the baseline to approve it.
-- page / CHANGED (8710 B -> 203040 B) -- removed word(s): e997079b31214a37, 44530001, 3d82f5dd4c68b950, 526e23fe66ca36b5, 2822420a7476eaf8, 550, 2b694e42415cc812, d77db3deaaeca675, 1b4553c277d50a18, fc2bbc77b057d82f, Browser, Discovery, Terrorism, 3956, 762 ...; added word(s): 5541f150f126d370, e2df67be89ea4145, 332, 2ab896cffcd4c3de, 829, 24c40e4fcaa99bcb, 932, 35494045d52f0fa7, 333, 822dc47b2aba7494, 981, fe140f8a64b566a9, 5e072c3c22094d94, e11aa2ec840551fc, Has ...
-- page /journal/is-j01-20250227-entry CHANGED (15388 B -> 27409 B) -- removed word(s): e997079b31214a37, 233, 526e23fe66ca36b5, 550, 2b694e42415cc812, ef174a40379c62dc, fc2bbc77b057d82f, 6970, n7, EyFQva4uap4SseOZYi9NU, L5, L7; added word(s): 5541f150f126d370, e2df67be89ea4145, 332, 2ab896cffcd4c3de, 932, 35494045d52f0fa7, 147, bd1d6fd888098bd1, e7d2824ae67df26e, e11aa2ec840551fc, class, min, screen, col, bg ...
