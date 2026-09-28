@@ -1,4 +1,6 @@
-Digest 2026-09-27T21:42:03Z -- 1 change(s)/issue(s) detected
+Digest 2026-09-28T06:02:01Z -- 3 change(s)/issue(s) detected
 
 Live production differs from your approved baseline:
-- Live is on a NEWER deployment (commit bec0e08f58) than the approved baseline (4e2b55f2f8). If this was you, regenerate the baseline to approve it.
+- Live is on a NEWER deployment (commit 6e0b947ace) than the approved baseline (4e2b55f2f8). If this was you, regenerate the baseline to approve it.
+- page / CHANGED (203691 B -> 204192 B) -- removed word(s): b110879b9118e5aa, 649, cd0efb4f9b242c8d, 176, 170e770544ba2625, 79763f2e06f33031, a898b227db61fe84, 5bc16f90dc296a24, bec7c398e8a0d4fd, 9cf62ebaf7c87e6f, copyright, 170e770, 544ba2625, 3885, ZVMlzeZPdZ3JAqp2ia0So; added word(s): 5f4940bdfa38daea, 359, cdcbd7b69e832fc3, 7ae979b78761c7a8, f482cb37b198d72d, a94c568b0bcf1976, b8a2370440ad11d6, 06e00c56b9714e22, 6f46ef2384d6a487, Insights, insights, watched, readers, Critical, 7ae979b ...
+- page /journal/is-j01-20250227-entry CHANGED (27409 B -> 29929 B) -- removed word(s): b110879b9118e5aa, 649, cd0efb4f9b242c8d, 176, 170e770544ba2625, 79763f2e06f33031, 25dc62385cfa8d29, 9cf62ebaf7c87e6f, copyright, terms, n8, 3885, nc, ZVMlzeZPdZ3JAqp2ia0So, L8 ...; added word(s): 5f4940bdfa38daea, 359, cdcbd7b69e832fc3, 278, 7ae979b78761c7a8, f482cb37b198d72d, c3dbab6969bc16d8, 6f46ef2384d6a487, Insights, insights, What, see, watched, publishes, own ...
