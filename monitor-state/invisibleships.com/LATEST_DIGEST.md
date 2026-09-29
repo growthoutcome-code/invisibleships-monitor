@@ -1,4 +1,6 @@
-Digest 2026-09-29T06:20:10Z -- 1 change(s)/issue(s) detected
+Digest 2026-09-29T18:21:09Z -- 3 change(s)/issue(s) detected
 
 Live production differs from your approved baseline:
-- Live is on a NEWER deployment (commit 6e0b947ace) than the approved baseline (4e2b55f2f8). If this was you, regenerate the baseline to approve it.
+- Live is on a NEWER deployment (commit e20f91c560) than the approved baseline (4e2b55f2f8). If this was you, regenerate the baseline to approve it.
+- page / CHANGED (204192 B -> 204059 B) -- removed word(s): 5f4940bdfa38daea, 359, cdcbd7b69e832fc3, 18f4530e2ce971fa, 7ae979b78761c7a8, f482cb37b198d72d, a94c568b0bcf1976, 06e00c56b9714e22, 6f46ef2384d6a487, watched, readers, 7ae979b, 78761c7a8, F1lPtJKKSX6xrLGuvSo4I; added word(s): 87b4aab1af174d18, 756, a196f7f78d129642, 15a5ba0207b69c30, 644ba16f653e6114, 688dc85925cca64f, 41d32e41ec169e8b, 24b309919ce0e8d2, caa1d91fd29b6ece, Analytics, PostHog, See, 644ba16, f653e6114, 0qqnk7ObVqXV4lw ...
+- page /journal/is-j01-20250227-entry CHANGED (29929 B -> 27777 B) -- removed word(s): 5f4940bdfa38daea, 359, cdcbd7b69e832fc3, 18f4530e2ce971fa, 7ae979b78761c7a8, f482cb37b198d72d, c3dbab6969bc16d8, 6f46ef2384d6a487, What, see, watched, publishes, own, readers, never ...; added word(s): 87b4aab1af174d18, 756, a196f7f78d129642, 15a5ba0207b69c30, 644ba16f653e6114, 688dc85925cca64f, 6217e868751d365f, caa1d91fd29b6ece, Analytics, Google, PostHog, counted, n8, nc, 0qqnk7ObVqXV4lw ...
