@@ -1,4 +1,6 @@
-Digest 2026-10-03T16:50:29Z -- 1 change(s)/issue(s) detected
+Digest 2026-10-03T21:52:04Z -- 3 change(s)/issue(s) detected
 
 Live production differs from your approved baseline:
-- Live is on a NEWER deployment (commit d83eb1de1f) than the approved baseline (4e2b55f2f8). If this was you, regenerate the baseline to approve it.
+- Live is on a NEWER deployment (commit f6015e44e8) than the approved baseline (4e2b55f2f8). If this was you, regenerate the baseline to approve it.
+- page / CHANGED (206434 B -> 207620 B) -- removed word(s): 69fdf6128c4aa579, f92fdb2a5a6f1357, f260010a355da0bc, 779, bd120bb0a43d0bc2, 9cfc48b7e38d6589, e9f2b8c8f14b0da3, 7839, i4pX5zuP, bZdCdroqa4Md; added word(s): e205a156ee21e412, 6e9a78e8e0fa2296, 24beef2e27e66d58, 557, abe85c0bacd69b4e, fcb2aa74d410a5cc, 2b294e069cab6f9c, typeof, Node, prototype, isTranslationGuard, return, rm, removeChild, ins ...
+- page /journal/is-j01-20250227-entry CHANGED (31280 B -> 32466 B) -- removed word(s): 69fdf6128c4aa579, f92fdb2a5a6f1357, f260010a355da0bc, 779, bd120bb0a43d0bc2, a2647a2d5a0d32ef, e9f2b8c8f14b0da3, 7839, i4pX5zuP, bZdCdroqa4Md; added word(s): e205a156ee21e412, 6e9a78e8e0fa2296, 24beef2e27e66d58, 557, abe85c0bacd69b4e, 6f00280565618d9a, 2b294e069cab6f9c, typeof, Node, prototype, isTranslationGuard, return, rm, removeChild, ins ...
